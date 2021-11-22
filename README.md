@@ -1,3 +1,3 @@
 # pent
 
-Presentation tool that allows the user to draw in the air and record videos.
+Application that allows user to use pointer finger as cursor in the air.
