@@ -5,6 +5,11 @@ import mediapipe as mp
 import win32api as wp
 import win32con as wc
 import pent_gui
+import psutil
+import os
+import subprocess
+import threading
+from win32gui import GetForegroundWindow, ShowWindow
 from imutils.video import WebcamVideoStream
 
 
@@ -20,33 +25,41 @@ def get_distance(first, second):
 
 
 def track():
-    hands = mp.solutions.hands.Hands()  # False, 2, 0.5, 0.5
+
+    hands = mp.solutions.hands.Hands(max_num_hands=1)  # False, 2, 0.5, 0.5
     draw = mp.solutions.drawing_utils
-    cap = WebcamVideoStream(src=0).start()
+    # cap = WebcamVideoStream(src=0).start()
+    cap = cv2.VideoCapture(0)
     prev_time = 0
     cur_time = 0
+    tr_dc = False
+    gui_on = False
 
     cv2.namedWindow(WIN_NAME, cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty(WIN_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    overlay = cap.read()
+    _, overlay = cap.read()
     height, width, channel = overlay.shape
 
     record = True
     while record:
-        img = cap.read()
+        _, img = cap.read()
         img.flags.writeable = False
         img = cv2.flip(img, 1)
         rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         results = hands.process(rgb)
         sensed = results.multi_hand_landmarks
         if sensed:
+            if not gui_on:
+                gui_on = True
+                # subprocess.call('start pent_gui.py', shell=True)
+                # start gui
             for mano in sensed:
                 lm = mano.landmark[8]  # tip of index finger
                 cur = mano.landmark[12]  # tip of middle finger
                 compare = mano.landmark[3]  # thumb knuckle
-                lm_c_one = mano.landmark[1]  # base of thumb
-                lm_c_two = mano.landmark[0]  # wrist
+                th_tip = mano.landmark[4]  # thumb tip
+                ring_tip = mano.landmark[16]  # ring tip
                 cx, cy = int(lm.x * width), int(lm.y * height)
                 mx, my = int(compare.x * width), int(compare.y * height)
                 distance = get_distance((cur.x * width, cur.y * height), (mx, my))
@@ -54,6 +67,7 @@ def track():
                 # Translate to monitor specifications
                 mtrans_w = lm.x * MWIDTH
                 mtrans_h = lm.y * MHEIGHT
+
                 wp.SetCursorPos((int(mtrans_w), int(mtrans_h)))
 
                 if distance <= 50:
@@ -63,8 +77,22 @@ def track():
                     clicked_color = (255, 0, 255)
                     wp.mouse_event(wc.MOUSEEVENTF_LEFTUP, int(mtrans_w), int(mtrans_h), 0, 0)
 
-                cv2.circle(img, (cx, cy), 5, clicked_color, cv2.FILLED)
+                thumb_ring = get_distance((th_tip.x * width, th_tip.y * height),
+                                          (ring_tip.x * width, ring_tip.y * height))
+                if thumb_ring <= 15:
+                    if tr_dc:
+                        tr_dc = False
+                        wtm = GetForegroundWindow()
+                        ShowWindow(wtm, wc.SW_MINIMIZE)
+                else:
+                    tr_dc = True
 
+                cv2.circle(img, (cx, cy), 5, clicked_color, cv2.FILLED)
+        else:
+            if gui_on:
+                gui_on = False
+                # psutil.Process(pent_gui.get_pid()).terminate()
+                # stop gui
         cur_time = time.time()
         fps = 1 / (cur_time - prev_time)
         prev_time = cur_time
@@ -77,7 +105,7 @@ def track():
 
 
 def main():
-    pent_gui.launch_gui()
+    # pent_gui.launch_gui()
     track()
 
 

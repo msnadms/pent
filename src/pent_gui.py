@@ -1,29 +1,53 @@
 import tkinter as tk
+import win32api as wp
+
+MHEIGHT = wp.GetSystemMetrics(1)
+MWIDTH = wp.GetSystemMetrics(0)
 
 
-def launch_gui():
+class PentOverlay:
 
-    window = tk.Tk()
+    def __init__(self):
+        self.root = tk.Tk()
 
-    frame_left = tk.Frame()
-    frame_left.pack(side=tk.LEFT)
-    frame_right = tk.Frame()
-    frame_right.pack(side=tk.RIGHT)
+        self.button_settings = tk.Button(
+            self.root,
+            text='Settings',
+            font=('Consolas', '14'),
+            fg='blue',
+            bg='#f7f7f7',
+            relief='flat'
+        )
+        self.button_email = tk.Button(
+            self.root,
+            text='EMail',
+            font=('Consolas', '14'),
+            fg='blue',
+            bg='#f7f7f7',
+            relief='flat'
+        )
 
-    title = tk.Label(master=frame_left, text="P_ENT")
-    title.pack()
+        self.button_settings.grid(row=0, column=0)
+        self.button_email.grid(row=0, column=1)
+        self.root.configure(background='grey19')
+        self.root.wm_attributes('-transparentcolor', 'grey19')
+        self.root.overrideredirect(True)
+        self.root.geometry(f'{MWIDTH - 10}x{MHEIGHT // 2 - 10}+5+5')
+        self.root.lift()
+        self.root.wm_attributes("-topmost", True)
 
-    enter_pent = tk.Button(master = frame_right, text="Deploy")
-    enter_pent.pack()
+    def run(self):
+        self.root.mainloop()
 
-    window.mainloop()
+
+def stop():
+    pass
 
 
 def main():
-    launch_gui()
+    app = PentOverlay()
+    app.run()
 
 
 if __name__ == "__main__":
     main()
-
-
