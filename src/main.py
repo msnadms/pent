@@ -24,7 +24,7 @@ def get_distance(first, second):
     return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
 
-def track():
+def track(show_debug: bool):
 
     hands = mp.solutions.hands.Hands(max_num_hands=1)  # False, 2, 0.5, 0.5
     draw = mp.solutions.drawing_utils
@@ -35,8 +35,9 @@ def track():
     tr_dc = False
     gui_on = False
 
-    cv2.namedWindow(WIN_NAME, cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty(WIN_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    if show_debug:
+        cv2.namedWindow(WIN_NAME, cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty(WIN_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     _, overlay = cap.read()
     height, width, channel = overlay.shape
@@ -87,6 +88,9 @@ def track():
                 else:
                     tr_dc = True
 
+                sd = get_distance((cx, cy), (ring_tip.x * width, ring_tip.y * height))
+                if sd <= 20:
+                    return
                 cv2.circle(img, (cx, cy), 5, clicked_color, cv2.FILLED)
         else:
             if gui_on:
@@ -99,14 +103,15 @@ def track():
 
         cv2.putText(img, str(int(fps)), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 0), 1)
 
-        cv2.imshow(WIN_NAME, img)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        if show_debug:
+            cv2.imshow(WIN_NAME, img)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
 
 def main():
     # pent_gui.launch_gui()
-    track()
+    track(show_debug=False)
 
 
 if __name__ == "__main__":
