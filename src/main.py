@@ -4,6 +4,10 @@ import cv2
 import mediapipe as mp
 import win32api as wp
 import win32con as wc
+import pent_gui
+from imutils.video import WebcamVideoStream
+
+
 WIN_NAME = 'Picture'
 MHEIGHT = wp.GetSystemMetrics(1)
 MWIDTH = wp.GetSystemMetrics(0)
@@ -18,24 +22,21 @@ def get_distance(first, second):
 def track():
     hands = mp.solutions.hands.Hands()  # False, 2, 0.5, 0.5
     draw = mp.solutions.drawing_utils
-    cap = cv2.VideoCapture(0)
+    cap = WebcamVideoStream(src=0).start()
     prev_time = 0
     cur_time = 0
 
     cv2.namedWindow(WIN_NAME, cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty(WIN_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    _, overlay = cap.read()
+    overlay = cap.read()
     height, width, channel = overlay.shape
 
     record = True
     while record:
-        exito, img = cap.read()
+        img = cap.read()
         img.flags.writeable = False
         img = cv2.flip(img, 1)
-        if not exito:
-            print("Error! Wrong input device!")
-            break
         rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         results = hands.process(rgb)
         sensed = results.multi_hand_landmarks
@@ -76,6 +77,7 @@ def track():
 
 
 def main():
+    pent_gui.launch_gui()
     track()
 
 
