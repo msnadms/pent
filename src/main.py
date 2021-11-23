@@ -9,7 +9,7 @@ import psutil
 import os
 import subprocess
 import threading
-from win32gui import GetForegroundWindow, ShowWindow
+from win32gui import GetForegroundWindow, ShowWindow, EnumWindows
 from imutils.video import WebcamVideoStream
 
 
@@ -34,6 +34,8 @@ def track(show_debug: bool):
     cur_time = 0
     tr_dc = False
     gui_on = False
+    niterate = 0
+    prevx, prevy = 0, 0
 
     if show_debug:
         cv2.namedWindow(WIN_NAME, cv2.WND_PROP_FULLSCREEN)
@@ -44,6 +46,7 @@ def track(show_debug: bool):
 
     record = True
     while record:
+        niterate += 1
         _, img = cap.read()
         img.flags.writeable = False
         img = cv2.flip(img, 1)
@@ -69,7 +72,14 @@ def track(show_debug: bool):
                 mtrans_w = lm.x * MWIDTH
                 mtrans_h = lm.y * MHEIGHT
 
-                wp.SetCursorPos((int(mtrans_w), int(mtrans_h)))
+                #  Jitter protection, still should be optimized
+                curx, cury = wp.GetCursorPos()
+                if niterate % 2 == 0 and abs(curx - prevx) > 10 and abs(cury - prevy) > 10:
+                    wp.SetCursorPos((int(curx), int(cury)))
+                elif niterate % 2 != 0:
+                    wp.SetCursorPos((int(mtrans_w), int(mtrans_h)))
+
+                prevx, prevy = curx, cury
 
                 if distance <= 50:
                     clicked_color = (255, 0, 0)
@@ -89,7 +99,7 @@ def track(show_debug: bool):
                     tr_dc = True
 
                 sd = get_distance((cx, cy), (ring_tip.x * width, ring_tip.y * height))
-                if sd <= 20:
+                if sd <= 15:
                     return
                 cv2.circle(img, (cx, cy), 5, clicked_color, cv2.FILLED)
         else:
