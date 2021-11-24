@@ -4,10 +4,9 @@ import cv2
 import mediapipe as mp
 import win32api as wp
 import win32con as wc
-import pent_gui
-import psutil
+import pent_gui as pg
+import multiprocessing
 import os
-import subprocess
 import threading
 from win32gui import GetForegroundWindow, ShowWindow, EnumWindows
 from imutils.video import WebcamVideoStream
@@ -16,6 +15,7 @@ from imutils.video import WebcamVideoStream
 WIN_NAME = 'Picture'
 MHEIGHT = wp.GetSystemMetrics(1)
 MWIDTH = wp.GetSystemMetrics(0)
+STOP_THREAD = False
 
 
 def get_distance(first, second):
@@ -24,11 +24,15 @@ def get_distance(first, second):
     return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
 
+def summon_the_storm():
+    tr = threading.Thread(target=pg.main, args=())
+    tr.daemon = True
+    tr.start()
+
+
 def track(show_debug: bool):
 
     hands = mp.solutions.hands.Hands(max_num_hands=1)  # False, 2, 0.5, 0.5
-    draw = mp.solutions.drawing_utils
-    # cap = WebcamVideoStream(src=0).start()
     cap = cv2.VideoCapture(0)
     prev_time = 0
     cur_time = 0
@@ -43,7 +47,6 @@ def track(show_debug: bool):
 
     _, overlay = cap.read()
     height, width, channel = overlay.shape
-
     record = True
     while record:
         niterate += 1
@@ -56,7 +59,8 @@ def track(show_debug: bool):
         if sensed:
             if not gui_on:
                 gui_on = True
-                # subprocess.call('start pent_gui.py', shell=True)
+                summon_the_storm()
+                pg.STOP = False
                 # start gui
             for mano in sensed:
                 lm = mano.landmark[8]  # tip of index finger
@@ -72,7 +76,7 @@ def track(show_debug: bool):
                 mtrans_w = lm.x * MWIDTH
                 mtrans_h = lm.y * MHEIGHT
 
-                #  Jitter protection, still should be optimized
+                # Jitter protection, still should be optimized
                 curx, cury = wp.GetCursorPos()
                 if niterate % 2 == 0 and abs(curx - prevx) > 10 and abs(cury - prevy) > 10:
                     wp.SetCursorPos((int(curx), int(cury)))
@@ -99,13 +103,17 @@ def track(show_debug: bool):
                     tr_dc = True
 
                 sd = get_distance((cx, cy), (ring_tip.x * width, ring_tip.y * height))
-                if sd <= 15:
+                if sd <= 15 and niterate % 3 == 0:
                     return
+
+                if niterate == 3:
+                    niterate = 1
+
                 cv2.circle(img, (cx, cy), 5, clicked_color, cv2.FILLED)
         else:
             if gui_on:
                 gui_on = False
-                # psutil.Process(pent_gui.get_pid()).terminate()
+                pg.STOP = True
                 # stop gui
         cur_time = time.time()
         fps = 1 / (cur_time - prev_time)
@@ -120,7 +128,6 @@ def track(show_debug: bool):
 
 
 def main():
-    # pent_gui.launch_gui()
     track(show_debug=False)
 
 
